@@ -16,36 +16,26 @@ class TaskService {
   Future<List<Task>> fetchTasks({int limit = 5}) async {
     final normalized = _normalTaskTitles();
 
-    try {
-      final response = await _client.get(Uri.parse('$_baseUrl?_limit=$limit'));
+    final response = await _client.get(Uri.parse('$_baseUrl?_limit=$limit'));
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as List<dynamic>;
-        final tasks = data
-            .map((item) => Task.fromJson(item as Map<String, dynamic>))
-            .toList();
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body) as List<dynamic>;
+      final tasks = data
+          .map((item) => Task.fromJson(item as Map<String, dynamic>))
+          .toList();
 
-        final normalizedTasks = List.generate(tasks.length, (index) {
-          final task = tasks[index];
-          return task.copyWith(title: normalized[index]);
-        });
+      final normalizedTasks = List.generate(tasks.length, (index) {
+        final task = tasks[index];
+        return task.copyWith(title: normalized[index]);
+      });
 
-        await persistTasks(normalizedTasks);
-        return normalizedTasks;
-      }
-    } catch (_) {
-      // Tenta cache local abaixo.
+      await persistTasks(normalizedTasks);
+      return normalizedTasks;
     }
 
-    final persisted = await loadPersistedTasks();
-    if (persisted.isNotEmpty) {
-      return persisted;
-    }
-
-    final mock = _mockTasks(limit: limit);
-    await persistTasks(mock);
-    return mock;
+    throw Exception('Erro ao carregar tarefas (${response.statusCode})');
   }
+
 
   Future<Task> createTask(String title) async {
     final body = {
@@ -78,7 +68,6 @@ class TaskService {
     );
   }
 
-
   Future<void> deleteTask(int id) async {
     try {
       final response = await _client.delete(Uri.parse('$_baseUrl/$id'));
@@ -86,9 +75,7 @@ class TaskService {
       if (response.statusCode != 200 && response.statusCode != 204) {
         throw Exception('Falha ao remover tarefa. Código ${response.statusCode}');
       }
-    } catch (_) {
-      // DELETE fake: em modo offline/local, consideramos removido com sucesso.
-    }
+    } catch (_) {}
   }
 
   Future<void> persistTasks(List<Task> tasks) async {
@@ -109,6 +96,11 @@ class TaskService {
     return decoded
         .map((item) => Task.fromJson(item as Map<String, dynamic>))
         .toList();
+  }
+
+  Future<void> clearCache() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_storageKey);
   }
 
   List<String> _normalTaskTitles() {
