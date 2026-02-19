@@ -57,6 +57,7 @@ flutter pub get
 flutter run
 ```
 
-## Prints da aplicação
+## Prints da aplicação/Video Mostrando o que foi feito
+https://drive.google.com/drive/folders/15u_TZCEdTFV2cLgkQFQag43fKmaDEYpe?usp=drive_link
 
 
